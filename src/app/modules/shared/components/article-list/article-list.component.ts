@@ -8,7 +8,7 @@ import { Observable } from 'rxjs';
     styleUrls: ['./article-list.component.scss']
 })
 export class ArticleListComponent implements OnInit {
-    articles$!: Observable<{ results: { title: string, description: string, slug: string }[] }> | undefined;
+    articles$!: Observable<{ results: article[] }> | undefined;
 
     constructor(
         private blogService: BlogService
@@ -20,4 +20,11 @@ export class ArticleListComponent implements OnInit {
         this.articles$ = this.blogService.getBlogItems();
     }
 
+}
+
+export interface article{
+    title: string,
+    description: string,
+    slug: string,
+    author: string
 }
