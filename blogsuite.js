@@ -28,6 +28,8 @@ const availableCommands = [
     }
 ];
 
+
+
 const help = () => {
     console.log('Available commands:');
     availableCommands.forEach((command) => {
@@ -51,21 +53,25 @@ const create = () => {
     if (day < 10) {
         day = `0${day}`;
     }
+    const fs = require('fs');
+    const path = require('path');
 
     // get the title of the blog article
     const readline = require('readline-sync');
     const title = readline.question('Enter the title of the blog article: ');
+    // convert the title to lowercase and replace spaces with undescores
+    const fileTitle = title.toLowerCase().replace(/ /g, '_');
+    const fileName = `${day}-${month}-${year}-${fileTitle}.md`;
+    const filePath = path.join(getArticlesPath(), fileName);
+    if (fs.existsSync(filePath)) {
+        console.error("File " + filePath + "already exists. No new file was created.");
+        return;
+    }
 
     // read the short description of the blog article
     const description = readline.question('Enter a short description of the blog article: ');
 
-    // convert the title to lowercase and replace spaces with undescores
-    const fileTitle = title.toLowerCase().replace(/ /g, '_');
-    const fileName = `${day}-${month}-${year}-${fileTitle}.md`;
 
-    const fs = require('fs');
-    const path = require('path');
-    const filePath = path.join(__dirname, 'src/assets/articles', fileName);
 
     const fileContent =
         `Title: ${title}` + '\n' +
@@ -92,16 +98,37 @@ const create = () => {
 const list = () => {
     console.log('Listing all blog articles:');
     const fs = require('fs');
-    const path = require('path');
-    const articlesPath = path.join(__dirname, 'src/assets/articles');
-    const files = fs.readdirSync(articlesPath);
+    // const path = require('path');
+    const files = fs.readdirSync(getArticlesPath());
 
     // exclude the list.json file
     files.splice(files.indexOf('list.json'), 1);
-
+    if (files.length === 0){
+        console.log("No entries yet. Use \"create\" for a new article.");
+        return;
+    }
     files.forEach((file) => {
         console.log(file);
     });
+};
+
+const getArticlesPath = () => {
+    const fs = require('fs');
+    const path = require('path');
+    const rootPath = path.join(__dirname, 'src/assets/articles');
+    console.log("RootPath: " + rootPath);
+    if (!fs.existsSync(rootPath)) {
+        const readlineSync = require('readline-sync');
+        const shallCreateDir = readlineSync.question(`${rootPath} does not exist. Do you want to create it? (yes/no) `);
+
+        if (shallCreateDir.toLowerCase() === 'yes' || shallCreateDir.toLowerCase() === 'y') {
+            fs.mkdirSync(rootPath, { recursive: true });
+            console.log(`Created the directory: ${rootPath}`);
+        } else {
+            throw new Error('Directory does not exist.');
+        }
+    }
+    return rootPath;
 };
 
 
@@ -109,7 +136,7 @@ const deleteArticle = () => {
     console.log(`Choose blog article to delete:`);
     const fs = require('fs');
     const path = require('path');
-    const articlesPath = path.join(__dirname, 'src/assets/articles');
+    const articlesPath = path.join(getArticlesPath());
     const files = fs.readdirSync(articlesPath);
 
     // exclude the list.json file
@@ -139,11 +166,14 @@ const generateList = () => {
     console.log('Generating list of all blog articles:');
     const fs = require('fs');
     const path = require('path');
-    const articlesPath = path.join(__dirname, 'src/assets/articles');
+    const articlesPath = getArticlesPath();
     const files = fs.readdirSync(articlesPath);
-    files.splice(files.indexOf('list.json'), 1);
+    const index = files.indexOf('list.json');
+    if (index !== -1) {
+        files.splice(index, 1);
+    }
 
-    const listPath = path.join(__dirname, 'src/assets/articles/list.json');
+    const listPath = path.join( articlesPath + '/list.json');
     const list = [];
     files.forEach((file) => {
         // open the file and read the title and 120 first characters of the content
