@@ -29,6 +29,11 @@ const availableCommands = [
 ];
 
 
+const articlesPath = 'src/assets/articles';
+const binaryFileName = 'files.bin';
+const fs = require('fs');
+const path = require('path');
+const readlineSync = require('readline-sync');
 
 const help = () => {
     console.log('Available commands:');
@@ -53,8 +58,8 @@ const create = () => {
     if (day < 10) {
         day = `0${day}`;
     }
-    const fs = require('fs');
-    const path = require('path');
+    // const fs = require('fs');
+    // const path = require('path');
 
     // get the title of the blog article
     const readline = require('readline-sync');
@@ -70,7 +75,6 @@ const create = () => {
 
     // read the short description of the blog article
     const description = readline.question('Enter a short description of the blog article: ');
-
 
 
     const fileContent =
@@ -97,13 +101,13 @@ const create = () => {
 
 const list = () => {
     console.log('Listing all blog articles:');
-    const fs = require('fs');
+    // const fs = require('fs');
     // const path = require('path');
     const files = fs.readdirSync(getArticlesPath());
 
     // exclude the list.json file
     files.splice(files.indexOf('list.json'), 1);
-    if (files.length === 0){
+    if (files.length === 0) {
         console.log("No entries yet. Use \"create\" for a new article.");
         return;
     }
@@ -113,16 +117,16 @@ const list = () => {
 };
 
 const getArticlesPath = () => {
-    const fs = require('fs');
-    const path = require('path');
-    const rootPath = path.join(__dirname, 'src/assets/articles');
+    // const fs = require('fs');
+    // const path = require('path');
+    const rootPath = path.join(__dirname, articlesPath);
     console.log("RootPath: " + rootPath);
     if (!fs.existsSync(rootPath)) {
         const readlineSync = require('readline-sync');
         const shallCreateDir = readlineSync.question(`${rootPath} does not exist. Do you want to create it? (yes/no) `);
 
         if (shallCreateDir.toLowerCase() === 'yes' || shallCreateDir.toLowerCase() === 'y') {
-            fs.mkdirSync(rootPath, { recursive: true });
+            fs.mkdirSync(rootPath, {recursive: true});
             console.log(`Created the directory: ${rootPath}`);
         } else {
             throw new Error('Directory does not exist.');
@@ -134,8 +138,8 @@ const getArticlesPath = () => {
 
 const deleteArticle = () => {
     console.log(`Choose blog article to delete:`);
-    const fs = require('fs');
-    const path = require('path');
+    // const fs = require('fs');
+    // const path = require('path');
     const articlesPath = path.join(getArticlesPath());
     const files = fs.readdirSync(articlesPath);
 
@@ -164,8 +168,8 @@ const deleteArticle = () => {
 
 const generateList = () => {
     console.log('Generating list of all blog articles:');
-    const fs = require('fs');
-    const path = require('path');
+    // const fs = require('fs');
+    // const path = require('path');
     const articlesPath = getArticlesPath();
     const files = fs.readdirSync(articlesPath);
     const index = files.indexOf('list.json');
@@ -173,7 +177,7 @@ const generateList = () => {
         files.splice(index, 1);
     }
 
-    const listPath = path.join( articlesPath + '/list.json');
+    const listPath = path.join(articlesPath + '/list.json');
     const list = [];
     files.forEach((file) => {
         // open the file and read the title and 120 first characters of the content
@@ -197,6 +201,94 @@ const generateList = () => {
     });
 };
 
+/* Start with filling files. */
+
+
+function storeFilesInBinary() {
+    // const binaryFileName = 'combined.bin';
+
+    const inputDir = readlineSync.question('Enter the path of the directory: ');
+
+    if (!fs.existsSync(inputDir) || !fs.lstatSync(inputDir).isDirectory()) {
+        console.log("Invalid directory!");
+        return;
+    }
+
+    let allFilesBuffer = [];
+
+    if (fs.existsSync(binaryFileName)) {
+        allFilesBuffer.push(fs.readFileSync(binaryFileName));
+    }
+
+    const filesAndDirs = fs.readdirSync(inputDir);
+
+    for (const item of filesAndDirs) {
+        const itemPath = path.join(inputDir, item);
+        if (fs.lstatSync(itemPath).isFile()) {
+            const fileBuffer = fs.readFileSync(itemPath);
+            appendFileToBuffer(allFilesBuffer, item, fileBuffer);
+        } else {
+            const subFiles = fs.readdirSync(itemPath);
+            for (const subFile of subFiles) {
+                const subFilePath = path.join(itemPath, subFile);
+                if (fs.lstatSync(subFilePath).isFile()) {
+                    const fileBuffer = fs.readFileSync(subFilePath);
+                    appendFileToBuffer(allFilesBuffer, path.join(item, subFile), fileBuffer);
+                }
+            }
+        }
+    }
+
+    fs.writeFileSync(binaryFileName, Buffer.concat(allFilesBuffer));
+    console.log('All files from', inputDir, 'have been stored in', binaryFileName);
+}
+
+function appendFileToBuffer(bufferArray, relativePath, fileBuffer) {
+    const fileNameBuffer = Buffer.from(relativePath, 'utf-8');
+    const fileLengthBuffer = Buffer.alloc(4);
+    fileLengthBuffer.writeUInt32LE(fileBuffer.length);
+
+    bufferArray.push(fileNameBuffer, Buffer.from([0]), fileLengthBuffer, fileBuffer);
+}
+
+function retrieveFilesFromBinary() {
+    // const binaryFileName = 'combined.bin';
+    const outputDir = readlineSync.question('Enter the output directory path: ');
+
+    if (!fs.existsSync(outputDir)) {
+        console.log("Output directory doesn't exist. Creating...");
+        fs.mkdirSync(outputDir, { recursive: true });
+    }
+
+    const combinedBuffer = fs.readFileSync(binaryFileName);
+
+    let offset = 0;
+
+    while (offset < combinedBuffer.length) {
+        const fileNameLength = combinedBuffer.indexOf(Buffer.from([0]), offset) - offset;
+        const relativePath = combinedBuffer.slice(offset, offset + fileNameLength).toString('utf-8');
+        offset += fileNameLength + 1;
+
+        const fileLength = combinedBuffer.readUInt32LE(offset);
+        offset += 4;
+
+        const fileBuffer = combinedBuffer.slice(offset, offset + fileLength);
+        offset += fileLength;
+
+        const outputPath = path.join(outputDir, relativePath);
+
+        // Ensure that the directory exists
+        const parentDirectory = path.dirname(outputPath);
+        if (!fs.existsSync(parentDirectory)) {
+            fs.mkdirSync(parentDirectory, { recursive: true });
+        }
+
+        fs.writeFileSync(outputPath, fileBuffer);
+    }
+
+    console.log('All files and folder structures have been restored to', outputDir);
+}
+
 const command = process.argv[2];
 switch (command) {
     case 'help':
@@ -213,6 +305,15 @@ switch (command) {
         break;
     case 'generate-list':
         generateList();
+        break;
+    case 'fill':
+        fill();
+        break;
+    case 'storedir':
+        storeFilesInBinary();
+        break;
+    case 'restoredir':
+        retrieveFilesFromBinary();
         break;
     default:
         console.log(`Unknown command: ${command} please use the help command to see all available commands`);
