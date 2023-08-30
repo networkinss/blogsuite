@@ -53,7 +53,7 @@ node blogsuite.js restoredir
 ```
 Now you have to tell blogsuite where the path is, in which the files shall be restored.
 For my application it is src/app/blog.
-Existing files will be overwritten.
+Existing files will be overwritten without warning!
 
 Now check the files if all paths are ok, especially if you adjusted them.
 
@@ -83,9 +83,20 @@ Once the routing is finished, you can easily integrate the article-list within y
 Like adding a link to the article-list into your site menu or whereever you like it.
 Example: '<a href="blog">Blog</a>'.
 
+## Packages 
+There might be some packages that need to be installed that are not in your app yet.
+You will simply need to check for error messages due to missing packages, and install with:
+```bash
+npm install <packagename>
+```
+
 ## Further development
 The database file filestore.bin has been created to make the code independant from the article creation.
 That way it is possible to create another filestore.bin like for e.g. ReactJS or Vue.js code.
+To create another filestorebin, simply use the parameter "storedir". It will ask for the directory which
+shall be store. Rename it to something appropiate like "reactjs.bin".  
+And then there can be a lot of pre-configured file stores, containing all you need to create a simple blog in your web application.
+
 
 
 
