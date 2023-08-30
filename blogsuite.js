@@ -30,7 +30,7 @@ const availableCommands = [
 
 
 const articlesPath = 'src/assets/articles';
-const binaryFileName = 'files.bin';
+const binaryFileName = 'filestore.bin';
 const fs = require('fs');
 const path = require('path');
 const readlineSync = require('readline-sync');
