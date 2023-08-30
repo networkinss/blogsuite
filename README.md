@@ -95,6 +95,14 @@ The database file filestore.bin has been created to make the code independant fr
 That way it is possible to create another filestore.bin like for e.g. ReactJS or Vue.js code.
 To create another filestorebin, simply use the parameter "storedir". It will ask for the directory which
 shall be store. Rename it to something appropiate like "reactjs.bin".  
+To restore with another file, simply change the value in blogsuite.js:
+```
+const binaryFileName = 'filestore.bin';
+```
+and then execute the blogsuite with parameter "restoredir". It will ask for the directory:
+```
+node blogsuite restoredir
+```
 And then there can be a lot of pre-configured file stores, containing all you need to create a simple blog in your web application.
 
 
