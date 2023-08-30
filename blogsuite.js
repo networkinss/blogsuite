@@ -257,7 +257,7 @@ function retrieveFilesFromBinary() {
 
     if (!fs.existsSync(outputDir)) {
         console.log("Output directory doesn't exist. Creating...");
-        fs.mkdirSync(outputDir, { recursive: true });
+        fs.mkdirSync(outputDir, {recursive: true});
     }
 
     const combinedBuffer = fs.readFileSync(binaryFileName);
@@ -280,7 +280,7 @@ function retrieveFilesFromBinary() {
         // Ensure that the directory exists
         const parentDirectory = path.dirname(outputPath);
         if (!fs.existsSync(parentDirectory)) {
-            fs.mkdirSync(parentDirectory, { recursive: true });
+            fs.mkdirSync(parentDirectory, {recursive: true});
         }
 
         fs.writeFileSync(outputPath, fileBuffer);
