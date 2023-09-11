@@ -25,6 +25,16 @@ const availableCommands = [
         name: 'generate-list',
         description: 'generates a list of all blog articles',
         usage: 'generate-list'
+    },
+    {
+        name: 'storedir',
+        description: 'Stores all files and folders (1 level) into a binary file.',
+        usage: 'storedir'
+    },
+    {
+        name: 'restoredir',
+        description: 'Restores all files and folders from a binary file.',
+        usage: 'restoredir'
     }
 ];
 
@@ -305,9 +315,6 @@ switch (command) {
         break;
     case 'generate-list':
         generateList();
-        break;
-    case 'fill':
-        fill();
         break;
     case 'storedir':
         storeFilesInBinary();
