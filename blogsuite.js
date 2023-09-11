@@ -40,7 +40,6 @@ const availableCommands = [
 
 
 const articlesPath = 'src/assets/articles';
-const binaryFileName = 'filestore.bin';
 const fs = require('fs');
 const path = require('path');
 const readlineSync = require('readline-sync');
@@ -68,8 +67,6 @@ const create = () => {
     if (day < 10) {
         day = `0${day}`;
     }
-    // const fs = require('fs');
-    // const path = require('path');
 
     // get the title of the blog article
     const readline = require('readline-sync');
@@ -86,12 +83,12 @@ const create = () => {
     // read the short description of the blog article
     const description = readline.question('Enter a short description of the blog article: ');
 
-
     const fileContent =
         `Title: ${title}` + '\n' +
         `Description: ${description}` + '\n' +
         `Date: ${day}-${month}-${year}` + '\n' +
         `Author: Not specified` + '\n' +
+        `Status: Draft` + '\n' +
         `---` + '\n' +
         `Change this content to your liking` + '\n';
 
@@ -133,13 +130,13 @@ const getArticlesPath = () => {
     console.log("RootPath: " + rootPath);
     if (!fs.existsSync(rootPath)) {
         const readlineSync = require('readline-sync');
-        const shallCreateDir = readlineSync.question(`${rootPath} does not exist. Do you want to create it? (yes/no) `);
 
+        const shallCreateDir = readlineSync.question(`${rootPath} does not exist. Do you want to create it? (yes/no) `);
         if (shallCreateDir.toLowerCase() === 'yes' || shallCreateDir.toLowerCase() === 'y') {
             fs.mkdirSync(rootPath, {recursive: true});
             console.log(`Created the directory: ${rootPath}`);
         } else {
-            throw new Error('Directory does not exist.');
+            throw new Error('Directory does not exist. Cannot create file for article.');
         }
     }
     return rootPath;
@@ -212,21 +209,33 @@ const generateList = () => {
 };
 
 /* Start with filling files. */
-
-
 function storeFilesInBinary() {
-    // const binaryFileName = 'combined.bin';
 
-    const inputDir = readlineSync.question('Enter the path of the directory: ');
-
+    const inputStr = readlineSync.question('Enter the path of the directory: ');
+    const inputDir = removePathSeparator(inputStr)
     if (!fs.existsSync(inputDir) || !fs.lstatSync(inputDir).isDirectory()) {
         console.log("Invalid directory!");
         return;
     }
+    const folderList = inputDir.split('/');
+    let folder = ''
+    let binaryFileName = ''
+    if(folderList.length > 0){
+        folder = folderList[folderList.length-1];
+        binaryFileName = folder + ".bin";
+        console.log("Will store files into binary file: " + binaryFileName);
+    }else{
+        throw new Error("Could not define filename for binary.");
+    }
 
     let allFilesBuffer = [];
-
     if (fs.existsSync(binaryFileName)) {
+        const shallCreateDir = readlineSync.question(`${binaryFileName} exists. Do you want to add files to it? (yes/no) `);
+        if (shallCreateDir.toLowerCase() === 'yes' || shallCreateDir.toLowerCase() === 'y') {
+            console.log("Adding files and folders to file " + binaryFileName);
+        } else {
+            throw new Error('File does exist already. Files are not stored.');
+        }
         allFilesBuffer.push(fs.readFileSync(binaryFileName));
     }
 
@@ -236,44 +245,54 @@ function storeFilesInBinary() {
         const itemPath = path.join(inputDir, item);
         if (fs.lstatSync(itemPath).isFile()) {
             const fileBuffer = fs.readFileSync(itemPath);
-            appendFileToBuffer(allFilesBuffer, item, fileBuffer);
+            appendFileToBuffer(allFilesBuffer,path.join(folder,item), fileBuffer);
         } else {
             const subFiles = fs.readdirSync(itemPath);
             for (const subFile of subFiles) {
                 const subFilePath = path.join(itemPath, subFile);
                 if (fs.lstatSync(subFilePath).isFile()) {
                     const fileBuffer = fs.readFileSync(subFilePath);
-                    appendFileToBuffer(allFilesBuffer, path.join(item, subFile), fileBuffer);
+                    appendFileToBuffer(allFilesBuffer, path.join(folder, item, subFile), fileBuffer);
                 }
             }
         }
     }
 
     fs.writeFileSync(binaryFileName, Buffer.concat(allFilesBuffer));
-    console.log('All files from', inputDir, 'have been stored in', binaryFileName);
+    console.log('All files from ',inputDir,' have been stored in ',binaryFileName);
 }
 
 function appendFileToBuffer(bufferArray, relativePath, fileBuffer) {
     const fileNameBuffer = Buffer.from(relativePath, 'utf-8');
     const fileLengthBuffer = Buffer.alloc(4);
     fileLengthBuffer.writeUInt32LE(fileBuffer.length);
-
     bufferArray.push(fileNameBuffer, Buffer.from([0]), fileLengthBuffer, fileBuffer);
+}
+function removePathSeparator(str) {
+    const pathSeparator = require('path').sep;
+    if (str.endsWith(pathSeparator)) {
+        return str.slice(0, -1);
+    }
+    return str;
 }
 
 function retrieveFilesFromBinary() {
-    // const binaryFileName = 'combined.bin';
     const outputDir = readlineSync.question('Enter the output directory path: ');
-
     if (!fs.existsSync(outputDir)) {
         console.log("Output directory doesn't exist. Creating...");
         fs.mkdirSync(outputDir, {recursive: true});
+    }
+    /* Get the binary filename. */
+    const binaryFileName = readlineSync.question('Enter the input binary path: ');
+    if (fs.existsSync(binaryFileName)) {
+        console.log("Reading files from " + binaryFileName)
+    }else{
+        throw new Error("Input file doesn't exist.");
     }
 
     const combinedBuffer = fs.readFileSync(binaryFileName);
 
     let offset = 0;
-
     while (offset < combinedBuffer.length) {
         const fileNameLength = combinedBuffer.indexOf(Buffer.from([0]), offset) - offset;
         const relativePath = combinedBuffer.slice(offset, offset + fileNameLength).toString('utf-8');
